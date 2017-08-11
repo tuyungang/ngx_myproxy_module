@@ -9,6 +9,11 @@ typedef struct
     ngx_int_t hello_counter;
 }ngx_http_myproxy_loc_conf_t;
 
+typedef struct
+{
+    ngx_int_t status;
+}ngx_http_myproxy_ctx_t;
+
 static ngx_int_t ngx_http_myproxy_init(ngx_conf_t *cf);
 static void *ngx_http_myproxy_create_loc_conf(ngx_conf_t *cf);
 static char *ngx_http_hello_string(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
@@ -78,13 +83,22 @@ static ngx_int_t
 ngx_http_myproxy_handler(ngx_http_request_t *r)
 {
     ngx_int_t    rc;
-    ngx_buf_t   *b;
-    ngx_chain_t  out;
+    //ngx_buf_t   *b;
+    //ngx_chain_t  out;
     ngx_http_myproxy_loc_conf_t* my_conf;
     u_char ngx_hello_string[1024] = {0};
     ngx_uint_t content_length = 0;
 
     ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0, "ngx_http_myproxy_handler is called!");
+
+    ngx_http_myproxy_ctx_t *myctx = ngx_http_get_module_ctx(r, ngx_http_myproxy_module);
+    if (myctx == NULL) {
+        myctx = ngx_palloc(r->pool, sizeof(ngx_http_myproxy_ctx_t));
+        if (myctx == NULL) {
+            return NGX_ERROR;
+        }
+        ngx_http_set_ctx(r, myctx, ngx_http_myproxy_module);
+    }
 
     my_conf = ngx_http_get_module_loc_conf(r, ngx_http_myproxy_module);
     if (my_conf->hello_string.len == 0 )
@@ -97,10 +111,6 @@ ngx_http_myproxy_handler(ngx_http_request_t *r)
     if (my_conf->hello_counter == NGX_CONF_UNSET
     || my_conf->hello_counter == 0)
     {
-        //ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0, "proxy_string:%s", r->uri.data);
-        //ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0, "proxy_string:%s", r->method_name.data);
-        //ngx_sprintf(ngx_hello_string, "%s", r->method_name.data);
-        //ngx_sprintf(ngx_hello_string + r->method_name.len - 1, "%s", r->uri.data);
         ngx_int_t len = r->uri_end - r->uri_start;
         ngx_memcpy(ngx_hello_string, r->uri_start, len);
         
